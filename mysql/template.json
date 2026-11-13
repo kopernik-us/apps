@@ -7,16 +7,18 @@
   "license": "other",
   "versions": [
     {
-      "version": "9",
+      "version": "9.7.4",
       "image": {
-        "id": "mysql:9"
-      }
+        "id": "ghcr.io/kopernik-us/mysql:9.7.4"
+      },
+      "architectures": ["x86_64", "arm64"]
     },
     {
-      "version": "8",
+      "version": "8.4.13",
       "image": {
-        "id": "mysql:8"
-      }
+        "id": "ghcr.io/kopernik-us/mysql:8.4.13"
+      },
+      "architectures": ["x86_64", "arm64"]
     }
   ],
   "env": [

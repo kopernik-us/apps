@@ -21,7 +21,7 @@ a template whose `uid` is not the name of its directory.
 ## When an app gets an image of its own
 
 A template whose application reads its environment points at the upstream image and has no Dockerfile:
-MySQL, PostgreSQL, Valkey and OpenSearch, today. An app gets an image here when that is not enough:
+PostgreSQL, Valkey and OpenSearch, today. An app gets an image here when that is not enough:
 
 - **The application cannot be configured by environment alone.** Hadoop is the case that started this
   directory: `fs.defaultFS` and `yarn.resourcemanager.hostname` are written into XML files rather than read
@@ -55,8 +55,9 @@ the home network, which no customer machine can reach.
 ## Publishing
 
 ```bash
-apps/publish.sh hadoop          # the template's first version, which is its default
-apps/publish.sh hadoop 3.4.1    # a particular version the template declares
+apps/publish.sh hadoop                  # the template's first version, which is its default
+apps/publish.sh hadoop 3.4.1            # a particular version the template declares
+apps/publish.sh mysql 9.7.4 8.4.13      # several, from the one commit, pinning each
 ```
 
 The script takes the image ref from the template rather than from an argument, because
@@ -111,9 +112,36 @@ that would discard the metadata of every file in HDFS.
 
 **`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
 `"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it, and the API
-refuses a request naming one. Publishing for arm64 would
-mean building Hadoop from the `aarch64` binary the Apache download page offers rather than deriving from the official
-image, which is a larger thing to own: the JDK, the layout and the user setup would become ours.
+refuses a request naming one. Publishing for arm64 would mean building Hadoop from the `aarch64` binary the Apache
+download page offers rather than deriving from the official image, which is a larger thing to own: the JDK, the
+layout and the user setup would become ours.
+
+## `mysql`
+
+`FROM mysql:<version>`, the official image, with an entry point that sizes the InnoDB buffer pool to the container's
+memory share before handing over to the upstream `docker-entrypoint.sh` unchanged. Upstream starts every server with
+a 128 MB pool, however large the machine, so a database on an 8 GB machine kept most of what it reads on disk. The
+entry point follows InnoDB's own `innodb_dedicated_server` rule, from `K_US_CONTAINER_MEMORY_MB` rather than from the
+memory the server detects, which inside a container may be the whole machine:
+
+| Container memory | Buffer pool |
+|---|---|
+| under 1 GB | 128 MB, the upstream default |
+| 1 GB to 4 GB | half |
+| over 4 GB | three quarters |
+
+MySQL rounds the size up to a multiple of its chunk size, so the pool it reports may be a little larger. A size the
+app states itself, `--innodb-buffer-pool-size` or `--innodb_buffer_pool_size` in its arguments, is never
+overridden, and nothing is sized when the image runs outside kopernik.us, where the variable is not set. Only the
+server is sized: the image run as a client or a shell is left alone.
+
+The data directory, `/var/lib/mysql`, is the upstream image's to prepare: its entry point gives it to the `mysql`
+user on every start.
+
+**Owning the image means owning its patches.** The upstream tag `mysql:9` moves to each patched build, so an app
+pointing at it got fixes without a release of ours. A version of ours names an exact release, 9.7.4 or 8.4.13, pinned
+by digest, and a MySQL security release reaches customers only when a new version is added to the template and
+published.
 
 ## Writing one
 
