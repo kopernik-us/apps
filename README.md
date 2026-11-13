@@ -29,7 +29,8 @@ into each; a change meant for all of them is made in all of them, which a diff o
 shows.
 
 A version is added by copying the directory of the nearest one, changing its `FROM` and whatever else differs,
-adding the version to `template.json` and publishing it. A version is retired by removing both, in one commit.
+adding the version to the end of `template.json`'s `versions`, which the console and the API take as the latest,
+and publishing it. A version is retired by removing both, in one commit.
 `AppDirectoryTest` fails a version naming an image of ours without a directory to build it from, a directory of a
 version the template no longer declares, and a file beside `template.json`, since none of those is an image anything
 publishes.
@@ -77,9 +78,9 @@ the home network, which no customer machine can reach.
 ## Publishing
 
 ```bash
-apps/publish.sh hadoop                  # the template's first version, which is its default
+apps/publish.sh hadoop                  # the template's latest version, which it lists last
 apps/publish.sh hadoop 3.4.1            # a particular version the template declares
-apps/publish.sh mysql 9.7.4 8.4.13      # several, from the one commit, pinning each
+apps/publish.sh mysql 8.4.13 9.7.4      # several, from the one commit, pinning each
 ```
 
 The script takes the image ref from the template rather than from an argument, because

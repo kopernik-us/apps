@@ -4,7 +4,7 @@
 # of a customer's app pull when they run that version. The digest each push produced is pinned in the app's
 # template.json, which is left for you to commit.
 #
-# Usage: apps/publish.sh <uid> [VERSION...]    (default: the template's first version)
+# Usage: apps/publish.sh <uid> [VERSION...]    (default: the template's latest version, which it lists last)
 #
 # Several versions are published from the one commit in one run, since each pin leaves the tree changed and a
 # second run would refuse it.
@@ -55,7 +55,7 @@ if wanted:
         sys.exit("error: the template declares no version %s, only %s"
                  % (wanted, ", ".join(str(version.get("version")) for version in versions)))
 else:
-    declared = versions[:1]
+    declared = versions[-1:]
 image = (declared[0].get("image") or {}).get("id")
 if not image:
     sys.exit("error: version %s names no image" % declared[0].get("version"))
