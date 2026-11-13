@@ -73,10 +73,11 @@ for you to commit. The server checks that digest against the request, so pinning
 immutable rather than whatever the tag points at that week; a template naming an image of ours without one
 fails `AppTemplateRegistryTest`.
 
-Multi-platform builds need a buildx builder that supports them; Docker Desktop's default one does. An image
-whose base offers one architecture records that in a `platforms` file beside its Dockerfile, one platform per
-line, rather than leaving it to be remembered on the command line; `PLATFORMS` in the environment overrides
-either.
+The platforms are the template's too. Each version of an app with an image of ours states `architectures`, named as
+machine types name them (`x86_64`, `arm64`), and the script builds for exactly those, as `linux/amd64` and
+`linux/arm64`. The console offers only machine types of a version's architectures, so an image built for fewer than
+its template states fails on machines the console let through, and `AppDirectoryTest` fails a version of ours which
+states none. Multi-platform builds need a buildx builder that supports them; Docker Desktop's default one does.
 
 ## The registry
 
@@ -108,12 +109,11 @@ namenode starts on a filesystem which exists; the script skips a directory which
 machine replaced under a running cluster comes back with the volume its predecessor wrote, and formatting
 that would discard the metadata of every file in HDFS.
 
-**`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which is what its `platforms`
-file records. A cluster whose machine type is arm64 — AWS Graviton, or the ARM plans at Akamai and
-DigitalOcean — fails when the machine pulls the image, and nothing in `machineRequirements` can express an
-architecture for the console to steer away from one. Publishing for arm64 would mean building Hadoop from the
-`aarch64` binary the Apache download page offers rather than deriving from the official image, which is a
-larger thing to own: the JDK, the layout and the user setup would become ours.
+**`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
+`"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it; a request
+naming one through the API is accepted, and its machines fail when they pull the image. Publishing for arm64 would
+mean building Hadoop from the `aarch64` binary the Apache download page offers rather than deriving from the official
+image, which is a larger thing to own: the JDK, the layout and the user setup would become ours.
 
 ## Writing one
 

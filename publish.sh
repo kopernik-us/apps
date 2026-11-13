@@ -13,12 +13,6 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/common.sh"
 
-# Platforms an application image is published for. A machine runs the architecture its owner chose a machine
-# type for, and a single-platform image fails at pull time on the others, so both are published unless the
-# image says otherwise in a platforms file of its own, which is how an image whose base offers one
-# architecture records that rather than leaving it to be remembered on the command line.
-DEFAULT_PLATFORMS="linux/amd64,linux/arm64"
-
 name="${1:-}"
 [ -n "$name" ] || fail "usage: apps/publish.sh <uid> [VERSION]"
 wanted_version="${2:-}"
@@ -27,13 +21,6 @@ app_dir="$REPO_ROOT/apps/$name"
 template="$app_dir/template.json"
 [ -f "$template" ] || fail "no app at apps/$name: it has no template.json"
 [ -f "$app_dir/Dockerfile" ] || fail "apps/$name has no Dockerfile: its template runs an upstream image"
-if [ -n "${PLATFORMS:-}" ]; then
-    platforms="$PLATFORMS"
-elif [ -f "$app_dir/platforms" ]; then
-    platforms="$(tr '\n' ',' <"$app_dir/platforms" | sed 's/,*$//')"
-else
-    platforms="$DEFAULT_PLATFORMS"
-fi
 command -v python3 >/dev/null || fail "python3 is required to read the template"
 
 # An image a customer pulls must be reproducible from a commit: the tag names an application version rather
@@ -42,6 +29,10 @@ is_tree_clean || fail "the working tree has uncommitted changes; commit or stash
 
 # The tag is the template's, not this script's: a create request is rejected unless its image matches a
 # template version exactly, so the ref the template declares is the only one worth pushing.
+#
+# So are the platforms. A version states the architectures its image runs on, as machine types name them, and the
+# console offers only machine types of those; an image built for fewer fails on the machines of the others, and
+# one whose base is published for one architecture cannot be built for two.
 resolved="$(python3 - "$template" "$wanted_version" <<'PY'
 import json
 import sys
@@ -61,12 +52,22 @@ else:
 image = (declared[0].get("image") or {}).get("id")
 if not image:
     sys.exit("error: version %s names no image" % declared[0].get("version"))
+platforms = {"x86_64": "linux/amd64", "arm64": "linux/arm64"}
+architectures = declared[0].get("architectures") or []
+if not architectures:
+    sys.exit("error: version %s states no architectures to build for" % declared[0].get("version"))
+unknown = [architecture for architecture in architectures if architecture not in platforms]
+if unknown:
+    sys.exit("error: version %s states architectures no platform is known for: %s"
+             % (declared[0].get("version"), ", ".join(unknown)))
 print(declared[0]["version"])
 print(image)
+print(",".join(platforms[architecture] for architecture in architectures))
 PY
 )" || exit 1
 version="$(sed -n 1p <<<"$resolved")"
 image="$(sed -n 2p <<<"$resolved")"
+platforms="$(sed -n 3p <<<"$resolved")"
 
 # A ref whose first segment names no host belongs to Docker Hub, which we cannot push to and which would
 # leave the template pointing at an image nobody published.

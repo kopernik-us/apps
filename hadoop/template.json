@@ -11,7 +11,8 @@
       "image": {
         "id": "ghcr.io/kopernik-us/hadoop:3.5.0",
         "digest": "sha256:87cb4122f1f6c06145913bfb0b64c3db1c22c1ea29d6204e274bde54532d045f"
-      }
+      },
+      "architectures": ["x86_64"]
     }
   ],
   "masterContainers": [
