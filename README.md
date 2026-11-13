@@ -110,8 +110,8 @@ machine replaced under a running cluster comes back with the volume its predeces
 that would discard the metadata of every file in HDFS.
 
 **`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
-`"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it; a request
-naming one through the API is accepted, and its machines fail when they pull the image. Publishing for arm64 would
+`"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it, and the API
+refuses a request naming one. Publishing for arm64 would
 mean building Hadoop from the `aarch64` binary the Apache download page offers rather than deriving from the official
 image, which is a larger thing to own: the JDK, the layout and the user setup would become ours.
 
