@@ -1,0 +1,43 @@
+{
+  "uid": "valkey",
+  "name": "Valkey",
+  "appType": "containerapp",
+  "description": "Valkey is an open-source in-memory data structure store that is commonly used for caching, queues, and ephemeral application state.",
+  "productLink": "https://valkey.io/",
+  "license": "BSD-3-Clause",
+  "versions": [
+    {
+      "version": "9",
+      "image": {
+        "id": "valkey/valkey:9"
+      }
+    }
+  ],
+  "env": [
+    {
+      "envVar": "VALKEY_EXTRA_FLAGS",
+      "label": "Startup flags, including --requirepass <password>",
+      "secret": true,
+      "required": false
+    }
+  ],
+  "ports": [
+    {
+      "hostPort": 6379,
+      "protocol": "tcp"
+    }
+  ],
+  "dataPaths": [
+    {
+      "containerPath": "/data",
+      "minSizeGb": 10
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 1,
+    "minMemoryGb": 1
+  },
+  "tags": [
+    "cache"
+  ]
+}

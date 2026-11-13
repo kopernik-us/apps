@@ -1,0 +1,71 @@
+{
+  "uid": "hadoop",
+  "name": "Apache Hadoop",
+  "appType": "clusterapp",
+  "description": "Apache Hadoop stores large files across a cluster of machines in HDFS and runs work on the machines holding the data, scheduled by YARN. The master nodes coordinate the cluster, holding the HDFS namenode and the YARN resource manager; the core nodes hold the data and run the work, as HDFS datanodes and YARN node managers.",
+  "productLink": "https://hadoop.apache.org/",
+  "license": "Apache-2.0",
+  "versions": [
+    {
+      "version": "3.5.0",
+      "image": {
+        "id": "ghcr.io/kopernik-us/hadoop:3.5.0",
+        "digest": "sha256:87cb4122f1f6c06145913bfb0b64c3db1c22c1ea29d6204e274bde54532d045f"
+      }
+    }
+  ],
+  "masterContainers": [
+    {
+      "name": "namenode-format",
+      "lifecycle": "init",
+      "args": ["/opt/kopernik/format-hdfs.sh"]
+    },
+    {
+      "name": "namenode",
+      "args": ["hdfs", "namenode"],
+      "restartPolicy": "always",
+      "memoryMb": 2048,
+      "ports": [
+        { "hostPort": 8020, "protocol": "tcp" },
+        { "hostPort": 9870, "protocol": "tcp" }
+      ],
+      "dataPaths": [{ "containerPath": "/data/namenode", "minSizeGb": 20 }]
+    },
+    {
+      "name": "resourcemanager",
+      "args": ["yarn", "resourcemanager"],
+      "restartPolicy": "always",
+      "weight": 1,
+      "ports": [
+        { "hostPort": 8032, "protocol": "tcp" },
+        { "hostPort": 8088, "protocol": "tcp" }
+      ]
+    }
+  ],
+  "coreContainers": [
+    {
+      "name": "datanode",
+      "args": ["hdfs", "datanode"],
+      "restartPolicy": "always",
+      "memoryMb": 1024,
+      "ports": [
+        { "hostPort": 9864, "protocol": "tcp" },
+        { "hostPort": 9866, "protocol": "tcp" },
+        { "hostPort": 9867, "protocol": "tcp" }
+      ],
+      "dataPaths": [{ "containerPath": "/data/datanode", "minSizeGb": 50 }]
+    },
+    {
+      "name": "nodemanager",
+      "args": ["yarn", "nodemanager"],
+      "restartPolicy": "always",
+      "weight": 3,
+      "ports": [{ "hostPort": 8042, "protocol": "tcp" }]
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 2,
+    "minMemoryGb": 4
+  },
+  "tags": ["hadoop", "hdfs", "yarn", "analytics"]
+}

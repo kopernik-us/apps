@@ -1,0 +1,54 @@
+{
+  "uid": "postgres",
+  "name": "PostgreSQL",
+  "appType": "containerapp",
+  "description": "The PostgreSQL object-relational database system provides reliability and data integrity.",
+  "productLink": "https://github.com/docker-library/postgres",
+  "license": "PostgreSQL",
+  "versions": [
+    {
+      "version": "18.4",
+      "image": {
+        "id": "postgres:18.4"
+      }
+    }
+  ],
+  "env": [
+    {
+      "envVar": "POSTGRES_PASSWORD",
+      "label": "PostgreSQL admin password",
+      "secret": true,
+      "required": true
+    },
+    {
+      "envVar": "POSTGRES_DB",
+      "label": "Database name",
+      "default": "app"
+    },
+    {
+      "envVar": "POSTGRES_USER",
+      "label": "Database user",
+      "default": "app"
+    }
+  ],
+  "ports": [
+    {
+      "hostPort": 5432,
+      "protocol": "tcp"
+    }
+  ],
+  "dataPaths": [
+    {
+      "containerPath": "/var/lib/postgresql/data",
+      "minSizeGb": 20
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 1,
+    "minMemoryGb": 2
+  },
+  "tags": [
+    "sql",
+    "database"
+  ]
+}

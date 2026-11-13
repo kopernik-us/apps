@@ -1,0 +1,54 @@
+{
+  "uid": "opensearch",
+  "name": "OpenSearch",
+  "appType": "containerapp",
+  "description": "OpenSearch is an open-source search and analytics engine. Use this template to run a single-node OpenSearch instance for full-text search, logging, and observability.",
+  "productLink": "https://opensearch.org/",
+  "license": "Apache-2.0",
+  "versions": [
+    {
+      "version": "3.5.0",
+      "image": {
+        "id": "opensearchproject/opensearch:3.5.0"
+      }
+    }
+  ],
+  "env": [
+    {
+      "envVar": "OPENSEARCH_INITIAL_ADMIN_PASSWORD",
+      "label": "Admin password",
+      "secret": true,
+      "required": true
+    },
+    {
+      "envVar": "discovery.type",
+      "label": "Discovery type",
+      "constant": true,
+      "default": "single-node"
+    }
+  ],
+  "ports": [
+    {
+      "hostPort": 9200,
+      "protocol": "tcp"
+    },
+    {
+      "hostPort": 9600,
+      "protocol": "tcp"
+    }
+  ],
+  "dataPaths": [
+    {
+      "containerPath": "/usr/share/opensearch/data",
+      "minSizeGb": 30
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 2,
+    "minMemoryGb": 4
+  },
+  "tags": [
+    "nosql",
+    "database"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "uid": "mysql",
+  "name": "MySQL",
+  "appType": "containerapp",
+  "description": "MySQL is an open-source relational database management system (RDBMS) that uses Structured Query Language (SQL) to manage and manipulate data stored in tables. It is widely used for various applications, from small projects to large-scale enterprise systems, due to its reliability, performance, and scalability.",
+  "productLink": "https://www.mysql.com/about/legal/",
+  "license": "other",
+  "versions": [
+    {
+      "version": "9",
+      "image": {
+        "id": "mysql:9"
+      }
+    },
+    {
+      "version": "8",
+      "image": {
+        "id": "mysql:8"
+      }
+    }
+  ],
+  "env": [
+    {
+      "envVar": "MYSQL_ROOT_PASSWORD",
+      "label": "MySQL root/admin user password",
+      "secret": true,
+      "required": true
+    },
+    {
+      "envVar": "MYSQL_DATABASE",
+      "label": "Database name",
+      "default": "app"
+    },
+    {
+      "envVar": "MYSQL_USER",
+      "label": "Database user"
+    },
+    {
+      "envVar": "MYSQL_PASSWORD",
+      "label": "Database user password",
+      "secret": true
+    }
+  ],
+  "ports": [
+    {
+      "hostPort": 3306,
+      "protocol": "tcp"
+    }
+  ],
+  "dataPaths": [
+    {
+      "containerPath": "/var/lib/mysql",
+      "minSizeGb": 20
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 1,
+    "minMemoryGb": 2
+  },
+  "tags": [
+    "sql",
+    "database"
+  ]
+}
