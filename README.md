@@ -5,8 +5,9 @@ The applications the console offers to deploy, one directory per app, named afte
 ```
 apps/<uid>/
   template.json     the app template: what the console offers, and how its containers run
-  Dockerfile        the image of the app, when the upstream image cannot run it as the template describes
-  ...               whatever the image copies in, beside its Dockerfile
+  <version>/        one per template version whose image is ours, named as the template names the version
+    Dockerfile      the image of that version, when the upstream image cannot run it as the template describes
+    ...             whatever the image copies in, beside its Dockerfile
 ```
 
 A directory is the single place an app is defined. The template names things its image provides — the
@@ -17,6 +18,26 @@ The api-server bundles every `apps/*/template.json` into its resources as `app-t
 generates `app-templates/index` from the directories found (`generateAppTemplates` in
 `api-server/build.gradle.kts`), so an app is added by adding its directory and nothing else. The server refuses
 a template whose `uid` is not the name of its directory.
+
+## One directory per version
+
+Each version's image is built from a directory of its own, which states everything about it, the base image's
+tag included: `FROM mysql:8.4.13`, not a `VERSION` argument the build is handed. So a version's directory is all
+that goes into its image, and a change made for one version, say an option a newer server renamed, reaches no other
+until it is made there too. The cost is that files every version shares, such as MySQL's entry point, are copied
+into each; a change meant for all of them is made in all of them, which a diff of one directory against another
+shows.
+
+A version is added by copying the directory of the nearest one, changing its `FROM` and whatever else differs,
+adding the version to `template.json` and publishing it. A version is retired by removing both, in one commit.
+`AppDirectoryTest` fails a version naming an image of ours without a directory to build it from, a directory of a
+version the template no longer declares, and a file beside `template.json`, since none of those is an image anything
+publishes.
+
+What a version cannot differ in is its template. A version states its own image, `architectures`,
+`machineRequirements`, license and product link, but containers, environment, ports and data paths belong to the
+template, so versions whose application is configured differently, rather than built differently, are separate apps
+under separate uids.
 
 ## When an app gets an image of its own
 
@@ -34,8 +55,9 @@ PostgreSQL, Valkey and OpenSearch, today. An app gets an image here when that is
   was given, and does so again on every start, which a template cannot: its environment is fixed when the app
   is created.
 
-Moving an app from the upstream image to one of ours is a change to its directory alone: add the Dockerfile,
-point the template's versions at `ghcr.io/kopernik-us/<uid>:<version>`, and publish.
+Moving an app from the upstream image to one of ours is a change to its directory alone: add a directory with a
+Dockerfile for each version, point those versions at `ghcr.io/kopernik-us/<uid>:<version>`, and publish. A
+template may keep upstream images for some versions and ours for others.
 
 ## These are not the images of `scripts/build.sh`
 
@@ -62,9 +84,8 @@ apps/publish.sh mysql 9.7.4 8.4.13      # several, from the one commit, pinning 
 
 The script takes the image ref from the template rather than from an argument, because
 `ContainerAppServer.applyTemplate` rejects a create request whose image does not match a template version
-exactly. `AppDirectoryTest` holds that ref to `ghcr.io/kopernik-us/<uid>:<version>`. The version is passed as
-a `VERSION` build argument, so one Dockerfile serves every version a template declares, and the Dockerfile
-states no default of its own: a version is bumped in `template.json` alone.
+exactly. `AppDirectoryTest` holds that ref to `ghcr.io/kopernik-us/<uid>:<version>`. The build context is
+`apps/<uid>/<version>/`, and the build is given no arguments: what the image is, its directory says.
 
 Publishing requires a clean working tree. The tag names an application version rather than a tree, so a
 rebuilt tag cannot be told apart from the one customers already pulled.
@@ -118,7 +139,7 @@ layout and the user setup would become ours.
 
 ## `mysql`
 
-`FROM mysql:<version>`, the official image, with an entry point that sizes the InnoDB buffer pool to the container's
+`FROM mysql:<version>`, the official image, in `9.7.4/` and `8.4.13/`, with an entry point that sizes the InnoDB buffer pool to the container's
 memory share before handing over to the upstream `docker-entrypoint.sh` unchanged. Upstream starts every server with
 a 128 MB pool, however large the machine, so a database on an 8 GB machine kept most of what it reads on disk. The
 entry point follows InnoDB's own `innodb_dedicated_server` rule, from `K_US_CONTAINER_MEMORY_MB` rather than from the
@@ -145,7 +166,7 @@ published.
 
 ## Writing one
 
-The build context is the app's own directory, unlike the component Dockerfiles, which take the repo root
+The build context is the version's own directory, unlike the component Dockerfiles, which take the repo root
 because they build from the source tree. An application image needs nothing else from this repository, so
 everything it uses sits beside its Dockerfile.
 

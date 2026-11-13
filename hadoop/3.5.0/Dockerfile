@@ -1,4 +1,3 @@
-# check=skip=InvalidDefaultArgInFrom
 # Apache Hadoop, configured from the environment a kopernik.us cluster app gives its containers.
 #
 # The upstream image already turns environment variables named <FILE>.<EXT>_<property> into Hadoop
@@ -8,12 +7,7 @@
 #
 # So this image composes those values where the variables have values, and then hands over to the upstream
 # entry point unchanged, which writes the XML and runs the daemon it was asked for.
-#
-# The Hadoop version is the template's, which apps/publish.sh hands over as VERSION; the Dockerfile states none of
-# its own, so a version bump is made in template.json alone. The check skipped on the first line is the one warning
-# of exactly that.
-ARG VERSION
-FROM apache/hadoop:${VERSION}
+FROM apache/hadoop:3.5.0
 
 USER root
 COPY entrypoint.sh format-hdfs.sh /opt/kopernik/

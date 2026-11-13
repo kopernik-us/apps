@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Builds and publishes the image of an app from its directory apps/<uid>/: the image the machines of a customer's
-# app pull when they run that application. The digest each push produced is pinned in the app's template.json,
-# which is left for you to commit.
+# Builds and publishes the image of an app version from its directory apps/<uid>/<version>/: the image the machines
+# of a customer's app pull when they run that version. The digest each push produced is pinned in the app's
+# template.json, which is left for you to commit.
 #
 # Usage: apps/publish.sh <uid> [VERSION...]    (default: the template's first version)
 #
@@ -25,7 +25,6 @@ wanted_versions=("$@")
 app_dir="$REPO_ROOT/apps/$name"
 template="$app_dir/template.json"
 [ -f "$template" ] || fail "no app at apps/$name: it has no template.json"
-[ -f "$app_dir/Dockerfile" ] || fail "apps/$name has no Dockerfile: its template runs an upstream image"
 command -v python3 >/dev/null || fail "python3 is required to read the template"
 
 # An image a customer pulls must be reproducible from a commit: the tag names an application version rather
@@ -102,11 +101,14 @@ PY
 }
 
 publish_version() {
-    local resolved version image platforms host metadata digest
+    local resolved version image platforms version_dir host metadata digest
     resolved="$(resolve_version "$1")" || exit 1
     version="$(sed -n 1p <<<"$resolved")"
     image="$(sed -n 2p <<<"$resolved")"
     platforms="$(sed -n 3p <<<"$resolved")"
+    version_dir="$app_dir/$version"
+    [ -f "$version_dir/Dockerfile" ] \
+        || fail "apps/$name/$version has no Dockerfile: the template runs an upstream image for $version"
 
     # A ref whose first segment names no host belongs to Docker Hub, which we cannot push to and which would
     # leave the template pointing at an image nobody published.
@@ -123,14 +125,13 @@ publish_version() {
     metadata="$(mktemp)"
     docker buildx build \
         --platform "$platforms" \
-        --build-arg "VERSION=$version" \
         --label "org.opencontainers.image.source=https://github.com/kopernik-us/kopernik.us" \
         --label "org.opencontainers.image.revision=$(git -C "$REPO_ROOT" rev-parse HEAD)" \
         --label "org.opencontainers.image.version=$version" \
         --metadata-file "$metadata" \
         --push \
         -t "$image" \
-        "$app_dir"
+        "$version_dir"
 
     digest="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("containerimage.digest", ""))' \
         "$metadata")"
