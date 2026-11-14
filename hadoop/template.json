@@ -10,7 +10,7 @@
       "version": "3.5.0",
       "image": {
         "id": "ghcr.io/kopernik-us/hadoop:3.5.0",
-        "digest": "sha256:87cb4122f1f6c06145913bfb0b64c3db1c22c1ea29d6204e274bde54532d045f"
+        "digest": "sha256:3d07a2077dbd4e4e321fa31b24af8023315eb5c2508cef6a5377f044432fe55d"
       },
       "architectures": ["x86_64"]
     }
