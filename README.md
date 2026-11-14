@@ -130,9 +130,12 @@ unexpanded. The entry point composes it on the machine, where `K_US_MASTER_HOSTS
 nothing the cluster set for itself, so any of it can be overridden through `runtimeProps.env`.
 
 `format-hdfs.sh` is the template's init container. A step leads the service containers of its node, so the
-namenode starts on a filesystem which exists; the script skips a directory which holds one already, because a
-machine replaced under a running cluster comes back with the volume its predecessor wrote, and formatting
-that would discard the metadata of every file in HDFS.
+namenode starts on a filesystem which exists. The step states the namenode's data path, `/data/namenode`, as its
+own, which is what gives the two one directory: each data path is kept in a volume of the node which every
+container of the role stating it shares, and a format kept anywhere else is one the namenode never finds. The size
+stays on the namenode, which keeps the data. The script skips a directory which holds a filesystem already,
+because the directory outlives the containers which use it, and formatting it again would discard the metadata of
+every file in HDFS.
 
 **`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
 `"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it, and the API

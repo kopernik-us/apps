@@ -19,7 +19,8 @@
     {
       "name": "namenode-format",
       "lifecycle": "init",
-      "args": ["/opt/kopernik/format-hdfs.sh"]
+      "args": ["/opt/kopernik/format-hdfs.sh"],
+      "dataPaths": [{ "containerPath": "/data/namenode" }]
     },
     {
       "name": "namenode",
