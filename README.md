@@ -1,23 +1,42 @@
-# Apps
+# kopernik.us apps
 
-The applications the console offers to deploy, one directory per app, named after the app's template `uid`:
+The applications [kopernik.us](https://kopernik.us) offers to deploy on your own cloud account, one directory per
+app, named after the app's template `uid`. They are published here so that you can read what your machines run
+before running it, and check that the image a machine pulls was built from this repository.
 
 ```
-apps/<uid>/
+<uid>/
   template.json     the app template: what the console offers, and how its containers run
   <version>/        one per template version whose image is ours, named as the template names the version
     Dockerfile      the image of that version, when the upstream image cannot run it as the template describes
     ...             whatever the image copies in, beside its Dockerfile
 ```
 
-A directory is the single place an app is defined. The template names things its image provides — the
-image's own ref, the scripts a container runs, the directories it prepares for data — so the two are kept
-together and changed in one commit, and `AppDirectoryTest` fails the build when they disagree.
+A directory is the single place an app is defined. The template names things its image provides — the image's own
+ref, the scripts a container runs, the directories it prepares for data — so the two are kept together and changed
+in one commit, and kopernik.us checks as it builds that they agree.
 
-The api-server bundles every `apps/*/template.json` into its resources as `app-templates/<uid>.json` and
-generates `app-templates/index` from the directories found (`generateAppTemplates` in
-`api-server/build.gradle.kts`), so an app is added by adding its directory and nothing else. The server refuses
-a template whose `uid` is not the name of its directory.
+This repository is a mirror of the `apps/` directory of kopernik.us, kept with its history. It does not take
+contributions yet: issues and pull requests are not answered.
+
+## Verifying an image
+
+Every image under `ghcr.io/kopernik-us/` named by a template here is built by this repository's
+[publish workflow](.github/workflows/publish.yml) from a commit of `main`, and the workflow attests each build: a
+signed statement, kept in the registry and on GitHub, of the workflow, the commit and the digest. A template pins
+each image of ours by digest, as `versions[].image.digest`, and kopernik.us creates an app only from that digest,
+so the image a machine pulls is the one attested.
+
+To check one, take the digest from the template and run:
+
+```bash
+gh attestation verify oci://ghcr.io/kopernik-us/mysql@sha256:<digest> \
+  --repo kopernik-us/apps \
+  --signer-workflow kopernik-us/apps/.github/workflows/publish.yml \
+  --source-ref refs/heads/main
+```
+
+The output names the commit the image was built from, whose `<uid>/<version>/` is everything that went into it.
 
 ## One directory per version
 
@@ -30,10 +49,8 @@ shows.
 
 A version is added by copying the directory of the nearest one, changing its `FROM` and whatever else differs,
 adding the version to the end of `template.json`'s `versions`, which the console and the API take as the latest,
-and publishing it. A version is retired by removing both, in one commit.
-`AppDirectoryTest` fails a version naming an image of ours without a directory to build it from, a directory of a
-version the template no longer declares, and a file beside `template.json`, since none of those is an image anything
-publishes.
+and publishing it. A version is retired by removing both, in one commit. An app directory holds its template and the
+directories of the versions it declares, and nothing else, since nothing publishes an image from anywhere else.
 
 What a version cannot differ in is its template. A version states its own image, `architectures`,
 `machineRequirements`, license and product link, but containers, environment, ports and data paths belong to the
@@ -47,11 +64,11 @@ PostgreSQL, Valkey and OpenSearch, today. An app gets an image here when that is
 
 - **The application cannot be configured by environment alone.** Hadoop is the case that started this
   directory: `fs.defaultFS` and `yarn.resourcemanager.hostname` are written into XML files rather than read
-  from the environment, so something on the machine has to turn the variables the API injects into
+  from the environment, so something on the machine has to turn the variables kopernik.us injects into
   configuration before the daemon starts.
 - **The application does not size itself to its machine.** An upstream image starts with the defaults its
   publisher chose for a laptop — MySQL's 128 MB InnoDB buffer pool, PostgreSQL's 128 MB `shared_buffers` —
-  however large the machine the customer pays for, so most of it goes unused. An entry point which reads
+  however large the machine you pay for, so most of it goes unused. An entry point which reads
   `K_US_CONTAINER_MEMORY_MB` and `K_US_CONTAINER_CPUS` (see below) can size the application to the share it
   was given, and does so again on every start, which a template cannot: its environment is fixed when the app
   is created.
@@ -60,64 +77,39 @@ Moving an app from the upstream image to one of ours is a change to its director
 Dockerfile for each version, point those versions at `ghcr.io/kopernik-us/<uid>:<version>`, and publish. A
 template may keep upstream images for some versions and ours for others.
 
-## These are not the images of `scripts/build.sh`
-
-| | Component image | Application image |
-|---|---|---|
-| What it is | api-server, webapp | the application a customer's app runs |
-| Built | every release | when the application's version changes |
-| Tagged | the kopernik commit | the application's own version |
-| Pushed to | `REGISTRY`, the registry inside the cluster | `ghcr.io/kopernik-us/<uid>`, public |
-| Pulled by | the k3s cluster | a customer's machine, over the open internet |
-| Platforms | `linux/amd64` | `linux/amd64` and `linux/arm64` |
-
-`REGISTRY` and `KUBE_CONTEXT` therefore do not apply to anything in this directory, and an application
-image is never added to `COMPONENTS`: it would be tagged with a kopernik commit and pushed to a registry on
-the home network, which no customer machine can reach.
-
 ## Publishing
 
-```bash
-apps/publish.sh hadoop                  # the template's latest version, which it lists last
-apps/publish.sh hadoop 3.4.1            # a particular version the template declares
-apps/publish.sh mysql 8.4.13 9.7.4      # several, from the one commit, pinning each
-```
+An image is published by running the workflow **Publish an app version** on `main`, naming the app and,
+optionally, the version; without one it publishes the latest the template lists. The workflow takes the image ref
+from the template rather than from an input, because kopernik.us creates an app only from an image matching a
+template version exactly, and that ref is always `ghcr.io/kopernik-us/<uid>:<version>`. The build context is
+`<uid>/<version>/`, and the build is given no arguments: what the image is, its directory says.
 
-The script takes the image ref from the template rather than from an argument, because
-`ContainerAppServer.applyTemplate` rejects a create request whose image does not match a template version
-exactly. `AppDirectoryTest` holds that ref to `ghcr.io/kopernik-us/<uid>:<version>`. The build context is
-`apps/<uid>/<version>/`, and the build is given no arguments: what the image is, its directory says.
+A version already published is not rebuilt unless the run asks to `replace` it. The tag names an application
+version rather than a commit, so a rebuilt tag cannot be told apart from the one already pulled except by its
+digest; a template keeps the digest it pinned, which stays pullable once untagged.
 
-Publishing requires a clean working tree. The tag names an application version rather than a tree, so a
-rebuilt tag cannot be told apart from the one customers already pulled.
-
-The script then pins the digest it pushed in the template, as `versions[].image.digest`, and leaves the change
-for you to commit. The server checks that digest against the request, so pinning makes a customer's pull
-immutable rather than whatever the tag points at that week; a template naming an image of ours without one
-fails `AppTemplateRegistryTest`.
+The digest the run reports is then pinned in the template, after its attestation is checked, so the change that
+pins it is the next commit here.
 
 The platforms are the template's too. Each version of an app with an image of ours states `architectures`, named as
-machine types name them (`x86_64`, `arm64`), and the script builds for exactly those, as `linux/amd64` and
-`linux/arm64`. The console offers only machine types of a version's architectures, so an image built for fewer than
-its template states fails on machines the console let through, and `AppDirectoryTest` fails a version of ours which
-states none. A Dockerfile which runs nothing, setting modes with `COPY --chmod` rather than `RUN chmod`, builds for
-every platform on any machine; one with a `RUN` step needs an emulator for the platforms other than the machine's
-own, which `docker run --privileged --rm tonistiigi/binfmt --install arm64` registers.
+machine types name them (`x86_64`, `arm64`), and the workflow builds for exactly those, as `linux/amd64` and
+`linux/arm64`. kopernik.us offers only machine types of a version's architectures, so an image built for fewer than
+its template states would fail on machines it let through. A Dockerfile which runs nothing, setting modes with
+`COPY --chmod` rather than `RUN chmod`, builds for every platform without emulation; one with a `RUN` step builds
+the platforms other than the runner's own under QEMU, which is slower.
 
 ## The registry
 
 `ghcr.io/kopernik-us/<uid>`, which needs no creating: the package exists after the first push.
 
-**A new package is private, and a private one is unusable.** A customer's machine pulls the image itself
-over cloud-init, so the only way it could authenticate is
-`containerAppCreate.containerImageRepositoryCredentials` — which would mean shipping a kopernik token to
-every customer machine. After the first push, set the package public:
+**A new package is private, and a private one is unusable.** A machine pulls the image itself over cloud-init, so
+the only way it could authenticate is with registry credentials given to the app — which would mean shipping a
+kopernik.us token to every machine. After the first push, the package is set public, and given this repository's
+workflow write access in its settings under **Manage Actions access**.
 
-> Package → Package settings → Danger Zone → Change visibility → Public
-
-Public GHCR pulls are anonymous, which also avoids the Docker Hub rate limit an unauthenticated machine
-would otherwise meet. An organization can forbid public packages altogether, under `kopernik-us` → Settings
-→ Packages → Package creation, which is worth checking before the first push rather than after.
+Public GHCR pulls are anonymous, which also avoids the Docker Hub rate limit an unauthenticated machine would
+otherwise meet.
 
 ## `hadoop`
 
@@ -127,7 +119,7 @@ composes the values the upstream image cannot take from the environment and then
 Hadoop configuration, so `CORE-SITE.XML_fs.defaultFS` is a value it would write — but not one a template
 could state, because it holds the name of the cluster's first master, and the environment file reaches Docker
 unexpanded. The entry point composes it on the machine, where `K_US_MASTER_HOSTS` has a value, and sets
-nothing the cluster set for itself, so any of it can be overridden through `runtimeProps.env`.
+nothing the cluster set for itself, so any of it can be overridden through the app's environment.
 
 `format-hdfs.sh` is the template's init container. A step leads the service containers of its node, so the
 namenode starts on a filesystem which exists. The step states the namenode's data path, `/data/namenode`, as its
@@ -138,18 +130,18 @@ because the directory outlives the containers which use it, and formatting it ag
 every file in HDFS.
 
 **`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
-`"architectures": ["x86_64"]`. The console offers no arm64 machine type, such as AWS Graviton, for it, and the API
-refuses a request naming one. Publishing for arm64 would mean building Hadoop from the `aarch64` binary the Apache
-download page offers rather than deriving from the official image, which is a larger thing to own: the JDK, the
-layout and the user setup would become ours.
+`"architectures": ["x86_64"]`. kopernik.us offers no arm64 machine type, such as AWS Graviton, for it. Publishing
+for arm64 would mean building Hadoop from the `aarch64` binary the Apache download page offers rather than deriving
+from the official image, which is a larger thing to own: the JDK, the layout and the user setup would become ours.
 
 ## `mysql`
 
-`FROM mysql:<version>`, the official image, in `9.7.4/` and `8.4.13/`, with an entry point that sizes the InnoDB buffer pool to the container's
-memory share before handing over to the upstream `docker-entrypoint.sh` unchanged. Upstream starts every server with
-a 128 MB pool, however large the machine, so a database on an 8 GB machine kept most of what it reads on disk. The
-entry point follows InnoDB's own `innodb_dedicated_server` rule, from `K_US_CONTAINER_MEMORY_MB` rather than from the
-memory the server detects, which inside a container may be the whole machine:
+`FROM mysql:<version>`, the official image, in `9.7.4/` and `8.4.13/`, with an entry point that sizes the InnoDB
+buffer pool to the container's memory share before handing over to the upstream `docker-entrypoint.sh` unchanged.
+Upstream starts every server with a 128 MB pool, however large the machine, so a database on an 8 GB machine kept
+most of what it reads on disk. The entry point follows InnoDB's own `innodb_dedicated_server` rule, from
+`K_US_CONTAINER_MEMORY_MB` rather than from the memory the server detects, which inside a container may be the
+whole machine:
 
 | Container memory | Buffer pool |
 |---|---|
@@ -167,16 +159,14 @@ user on every start.
 
 **Owning the image means owning its patches.** The upstream tag `mysql:9` moves to each patched build, so an app
 pointing at it got fixes without a release of ours. A version of ours names an exact release, 9.7.4 or 8.4.13, pinned
-by digest, and a MySQL security release reaches customers only when a new version is added to the template and
-published.
+by digest, and a MySQL security release reaches you only when a new version is added to the template and published.
 
 ## Writing one
 
-The build context is the version's own directory, unlike the component Dockerfiles, which take the repo root
-because they build from the source tree. An application image needs nothing else from this repository, so
-everything it uses sits beside its Dockerfile.
+The build context is the version's own directory, and an application image needs nothing else, so everything it
+uses sits beside its Dockerfile.
 
-An entrypoint configures the application from what the API injects:
+An entrypoint configures the application from what kopernik.us injects:
 
 | Variable | What it says |
 |---|---|
@@ -188,5 +178,5 @@ An entrypoint configures the application from what the API injects:
 
 They are read on the machine when the app starts rather than taken from the machine type at provisioning,
 so a resized machine is configured for its new size on the next start. The names are reserved: a template
-container which sets one is refused as the server loads the template. See
-[cluster apps](../webapp/docs/api-docs/clusterapp.md) for the full list and what each node is told.
+container which sets one is refused. See [cluster apps](https://kopernik.us/docs/api-docs/clusterapp) for the full
+list and what each node is told.
