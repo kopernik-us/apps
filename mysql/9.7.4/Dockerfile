@@ -6,8 +6,9 @@
 # unchanged.
 FROM mysql:9.7.4
 
-COPY entrypoint.sh /opt/kopernik/
-RUN chmod 0755 /opt/kopernik/entrypoint.sh
+# The mode is set as the file is copied rather than by a RUN step, which would need an emulator to build the arm64
+# image on an amd64 machine.
+COPY --chmod=0755 entrypoint.sh /opt/kopernik/
 
 # The data directory, /var/lib/mysql, is the upstream image's: it declares the directory, and its entry point gives
 # it to the mysql user on every start, so a bind mount Docker creates for it as root is writable by the server too.

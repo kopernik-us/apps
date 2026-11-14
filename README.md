@@ -100,7 +100,9 @@ The platforms are the template's too. Each version of an app with an image of ou
 machine types name them (`x86_64`, `arm64`), and the script builds for exactly those, as `linux/amd64` and
 `linux/arm64`. The console offers only machine types of a version's architectures, so an image built for fewer than
 its template states fails on machines the console let through, and `AppDirectoryTest` fails a version of ours which
-states none. Multi-platform builds need a buildx builder that supports them; Docker Desktop's default one does.
+states none. A Dockerfile which runs nothing, setting modes with `COPY --chmod` rather than `RUN chmod`, builds for
+every platform on any machine; one with a `RUN` step needs an emulator for the platforms other than the machine's
+own, which `docker run --privileged --rm tonistiigi/binfmt --install arm64` registers.
 
 ## The registry
 

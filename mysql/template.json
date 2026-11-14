@@ -9,14 +9,16 @@
     {
       "version": "8.4.13",
       "image": {
-        "id": "ghcr.io/kopernik-us/mysql:8.4.13"
+        "id": "ghcr.io/kopernik-us/mysql:8.4.13",
+        "digest": "sha256:f2fe797fd4494d1dc760577bf3f5285bb04cc22d4c1e558814e1ce014e924cd0"
       },
       "architectures": ["x86_64", "arm64"]
     },
     {
       "version": "9.7.4",
       "image": {
-        "id": "ghcr.io/kopernik-us/mysql:9.7.4"
+        "id": "ghcr.io/kopernik-us/mysql:9.7.4",
+        "digest": "sha256:5883f3857f51ab0f68ff3b76126a01c7be144e53d04a3d043236b606c4f92815"
       },
       "architectures": ["x86_64", "arm64"]
     }
