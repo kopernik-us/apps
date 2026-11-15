@@ -19,6 +19,9 @@ in one commit, and kopernik.us checks as it builds that they agree.
 This repository is a mirror of the `apps/` directory of kopernik.us, kept with its history. It does not take
 contributions yet: issues and pull requests are not answered.
 
+The files here are under the [MIT license](LICENSE). The software inside the images is not: each image is built on,
+or is, an upstream image, distributed under its own authors' licenses; see [Licenses](#licenses).
+
 ## Verifying an image
 
 Every image under `ghcr.io/kopernik-us/` named by a template here is built by this repository's
@@ -180,3 +183,27 @@ They are read on the machine when the app starts rather than taken from the mach
 so a resized machine is configured for its new size on the next start. The names are reserved: a template
 container which sets one is refused. See [cluster apps](https://kopernik.us/docs/api-docs/clusterapp) for the full
 list and what each node is told.
+
+## Licenses
+
+The [MIT license](LICENSE) covers what this repository holds: the templates, the Dockerfiles, the scripts they copy
+into the images, and the workflow that builds them. It covers nothing an image takes from elsewhere.
+
+An image of ours is an upstream image with a few files added, so almost all of it is the upstream application and
+the operating system packages beneath it, each under its own license, which the upstream image documents. A template
+which runs an upstream image directly adds nothing to it at all. Running an app means running that software under
+those licenses, as running the upstream image yourself would.
+
+Each template states the license of its application as `license`:
+
+| App | Image | Application license |
+|---|---|---|
+| `hadoop` | ours, `FROM apache/hadoop` | Apache-2.0 |
+| `mysql` | ours, `FROM mysql` | `other`: MySQL Community Server is distributed by Oracle under the GPL, version 2 |
+| `opensearch` | upstream, `opensearchproject/opensearch` | Apache-2.0 |
+| `postgres` | upstream, `postgres` | PostgreSQL |
+| `valkey` | upstream, `valkey/valkey` | BSD-3-Clause |
+
+The application's license is not all of an image's: its base layers carry the licenses of the distribution's
+packages, and some upstream images bundle further software. The upstream image's own documentation is the place to
+read them.
