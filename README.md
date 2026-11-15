@@ -5,6 +5,7 @@ app, named after the app's template `uid`. They are published here so that you c
 before running it, and check that the image a machine pulls was built from this repository.
 
 ```
+INDEX.md            every version of every app: its image, what that is built from, and its license
 <uid>/
   template.json     the app template: what the console offers, and how its containers run
   <version>/        one per template version whose image is ours, named as the template names the version
@@ -30,7 +31,7 @@ signed statement, kept in the registry and on GitHub, of the workflow, the commi
 each image of ours by digest, as `versions[].image.digest`, and kopernik.us creates an app only from that digest,
 so the image a machine pulls is the one attested.
 
-To check one, take the digest from the template and run:
+To check one, take the image and its digest from the [index](INDEX.md), or from the template, and run:
 
 ```bash
 gh attestation verify oci://ghcr.io/kopernik-us/mysql@sha256:<digest> \
@@ -194,15 +195,8 @@ the operating system packages beneath it, each under its own license, which the 
 which runs an upstream image directly adds nothing to it at all. Running an app means running that software under
 those licenses, as running the upstream image yourself would.
 
-Each template states the license of its application as `license`:
-
-| App | Image | Application license |
-|---|---|---|
-| `hadoop` | ours, `FROM apache/hadoop` | Apache-2.0 |
-| `mysql` | ours, `FROM mysql` | `other`: MySQL Community Server is distributed by Oracle under the GPL, version 2 |
-| `opensearch` | upstream, `opensearchproject/opensearch` | Apache-2.0 |
-| `postgres` | upstream, `postgres` | PostgreSQL |
-| `valkey` | upstream, `valkey/valkey` | BSD-3-Clause |
+Each template states the license of its application as `license`, and a version may state its own; the
+[index](INDEX.md) lists the license of every version.
 
 The application's license is not all of an image's: its base layers carry the licenses of the distribution's
 packages, and some upstream images bundle further software. The upstream image's own documentation is the place to

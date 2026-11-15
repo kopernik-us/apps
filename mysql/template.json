@@ -4,7 +4,7 @@
   "appType": "containerapp",
   "description": "MySQL is an open-source relational database management system (RDBMS) that uses Structured Query Language (SQL) to manage and manipulate data stored in tables. It is widely used for various applications, from small projects to large-scale enterprise systems, due to its reliability, performance, and scalability.",
   "productLink": "https://www.mysql.com/about/legal/",
-  "license": "other",
+  "license": "GPL-2.0-only",
   "versions": [
     {
       "version": "8.4.13",
