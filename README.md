@@ -27,11 +27,14 @@ or is, an upstream image, distributed under its own authors' licenses; see [Lice
 
 Every image under `ghcr.io/kopernik-us/` named by a template here is built by this repository's
 [publish workflow](.github/workflows/publish.yml) from a commit of `main`, and the workflow attests each build: a
-signed statement, kept in the registry and on GitHub, of the workflow, the commit and the digest. A template pins
-each image of ours by digest, as `versions[].image.digest`, and kopernik.us creates an app only from that digest,
-so the image a machine pulls is the one attested.
+signed statement, kept in the registry and on GitHub, of the workflow, the commit and the digest. kopernik.us
+publishes these images through that workflow alone, so every build of a tag is attested, whichever one a machine
+pulled.
 
-To check one, take the image and its digest from the [index](INDEX.md), or from the template, and run:
+A template names an image by its tag, ours as upstream ones, so that a tag rebuilt on patched software reaches the
+machines created after it. To check an image, take the digest a machine runs, from
+`docker inspect --format '{{index .RepoDigests 0}}' <image>` on the machine, or the digest a tag names now, from
+`docker buildx imagetools inspect <image>`, and run:
 
 ```bash
 gh attestation verify oci://ghcr.io/kopernik-us/mysql@sha256:<digest> \
@@ -89,12 +92,10 @@ from the template rather than from an input, because kopernik.us creates an app 
 template version exactly, and that ref is always `ghcr.io/kopernik-us/<uid>:<version>`. The build context is
 `<uid>/<version>/`, and the build is given no arguments: what the image is, its directory says.
 
-A version already published is not rebuilt unless the run asks to `replace` it. The tag names an application
-version rather than a commit, so a rebuilt tag cannot be told apart from the one already pulled except by its
-digest; a template keeps the digest it pinned, which stays pullable once untagged.
-
-The digest the run reports is then pinned in the template, after its attestation is checked, so the change that
-pins it is the next commit here.
+A version already published is not rebuilt unless the run asks to `replace` it. Rebuilding is how a version of ours
+takes up fixes beneath its application, such as a base image its publisher rebuilt under the same tag: the tag
+names an application version rather than a build, and the new build reaches every machine created after it, while a
+machine created before keeps the build it pulled. Nothing in the template changes, since it names the tag alone.
 
 The platforms are the template's too. Each version of an app with an image of ours states `architectures`, named as
 machine types name them (`x86_64`, `arm64`), and the workflow builds for exactly those, as `linux/amd64` and
@@ -162,8 +163,9 @@ The data directory, `/var/lib/mysql`, is the upstream image's to prepare: its en
 user on every start.
 
 **Owning the image means owning its patches.** The upstream tag `mysql:9` moves to each patched build, so an app
-pointing at it got fixes without a release of ours. A version of ours names an exact release, 9.7.4 or 8.4.13, pinned
-by digest, and a MySQL security release reaches you only when a new version is added to the template and published.
+pointing at it got fixes without a release of ours. A version of ours names an exact release, 9.7.4 or 8.4.13, so a
+MySQL security release reaches you only when a new version is added to the template and published, while fixes to
+the system beneath it arrive when the version is rebuilt.
 
 ## Writing one
 

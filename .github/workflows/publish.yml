@@ -19,7 +19,7 @@ on:
         required: false
         type: string
       replace:
-        description: Rebuild a version already published; a digest pinned before stays pullable, untagged
+        description: Rebuild a version already published, so that its tag takes up patched software beneath the app
         required: false
         type: boolean
         default: false
