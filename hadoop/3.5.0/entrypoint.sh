@@ -52,12 +52,51 @@ if [ "$replication" -lt 1 ]; then
 fi
 add_setting "HDFS-SITE.XML_dfs.replication=$replication"
 
-# YARN hands out what the node manager says it has, and what it has is this container's share of the machine
-# rather than the machine. A container told nothing of its share is one the app put no limit on, which is the
-# whole machine.
+# The daemon's heap is sized from this container's share rather than left to the JVM. Java reads its limit from
+# the cgroup only where it recognises a container, and on kernels which no longer list the cgroup v2 controllers
+# in /proc/cgroups it does not, and sizes the heap from the whole machine: a resource manager limited to 1GB
+# would be let grow a heap past its limit, and a namenode given 2GB would never use half of it. A JVM needs
+# memory beside its heap, so the heap is three quarters of the share, and never leaves less than 256MB.
 memory_mb="${K_US_CONTAINER_MEMORY_MB:-${K_US_MACHINE_MEMORY_MB:-}}"
+is_nodemanager=false
+if [ "${1-}" = yarn ] && [ "${2-}" = nodemanager ]; then
+    is_nodemanager=true
+fi
 if [ -n "$memory_mb" ]; then
-    add_setting "YARN-SITE.XML_yarn.nodemanager.resource.memory-mb=$memory_mb"
+    if [ "$is_nodemanager" = true ]; then
+        # The node manager's own work is light, and what it is given beyond that is what YARN hands out.
+        heap_mb=$((memory_mb / 8))
+        if [ "$heap_mb" -lt 256 ]; then
+            heap_mb=256
+        elif [ "$heap_mb" -gt 1024 ]; then
+            heap_mb=1024
+        fi
+    else
+        heap_mb=$((memory_mb * 3 / 4))
+        if [ "$heap_mb" -gt $((memory_mb - 256)) ]; then
+            heap_mb=$((memory_mb - 256))
+        fi
+    fi
+    if [ "$heap_mb" -ge 64 ]; then
+        add_setting "HADOOP_HEAPSIZE_MAX=${heap_mb}m"
+    fi
+    # A heap the app set for itself is the one the daemon runs with, so it is what the rest is counted from.
+    case "${HADOOP_HEAPSIZE_MAX:-}" in
+        *[0-9]g | *[0-9]G) heap_mb=$((${HADOOP_HEAPSIZE_MAX%?} * 1024)) ;;
+        *[0-9]m | *[0-9]M) heap_mb="${HADOOP_HEAPSIZE_MAX%?}" ;;
+        *[0-9]) heap_mb="$HADOOP_HEAPSIZE_MAX" ;;
+    esac
+
+    # The containers YARN starts run inside the node manager's container, so they share its limit with the node
+    # manager itself. What YARN may hand out is that limit less the node manager's heap and the 256MB its JVM
+    # needs beside the heap; offering the whole limit would let a node's tasks fill it and be killed together.
+    if [ "$is_nodemanager" = true ]; then
+        yarn_mb=$((memory_mb - heap_mb - 256))
+        if [ "$yarn_mb" -lt 256 ]; then
+            yarn_mb=256
+        fi
+        add_setting "YARN-SITE.XML_yarn.nodemanager.resource.memory-mb=$yarn_mb"
+    fi
 fi
 cpus="${K_US_CONTAINER_CPUS:-${K_US_MACHINE_CPUS:-}}"
 if [ -n "$cpus" ]; then
@@ -65,6 +104,20 @@ if [ -n "$cpus" ]; then
     vcores="$(awk -v c="$cpus" 'BEGIN { n = int(c); if (n < 1) n = 1; print n }')"
     add_setting "YARN-SITE.XML_yarn.nodemanager.resource.cpu-vcores=$vcores"
 fi
+
+# YARN rounds every request up to its smallest allocation, 1GB unless told otherwise, which on a node of the
+# template's smallest machine leaves room for one task. MapReduce's own defaults are as large: 1.5GB for a job's
+# application master and 1GB for each task, which together do not fit such a node at all, so a job on a cluster of
+# one core node would wait forever. These fit a node of 4GB; a job wanting more asks for it with -D.
+add_setting "YARN-SITE.XML_yarn.scheduler.minimum-allocation-mb=256"
+add_setting "MAPRED-SITE.XML_yarn.app.mapreduce.am.resource.mb=1024"
+add_setting "MAPRED-SITE.XML_yarn.app.mapreduce.am.command-opts=-Xmx768m"
+add_setting "MAPRED-SITE.XML_mapreduce.map.memory.mb=512"
+add_setting "MAPRED-SITE.XML_mapreduce.reduce.memory.mb=512"
+# YARN's physical memory check holds a task to what it asked for. Its virtual memory check holds it to 2.1 times
+# that, which a JVM's reserved but unused address space exceeds from the start, so it kills tasks well within
+# their memory.
+add_setting "YARN-SITE.XML_yarn.nodemanager.vmem-check-enabled=false"
 
 add_setting "YARN-SITE.XML_yarn.nodemanager.aux-services=mapreduce_shuffle"
 add_setting "MAPRED-SITE.XML_mapreduce.framework.name=yarn"

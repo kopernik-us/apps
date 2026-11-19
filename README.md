@@ -134,6 +134,24 @@ stays on the namenode, which keeps the data. The script skips a directory which 
 because the directory outlives the containers which use it, and formatting it again would discard the metadata of
 every file in HDFS.
 
+The entry point sizes each daemon's heap from `K_US_CONTAINER_MEMORY_MB` rather than leaving it to Java. Java finds
+its limit in the cgroup only where it recognises a container, and on kernels which no longer list the cgroup v2
+controllers in `/proc/cgroups`, Ubuntu 26.04's among them, it does not: every daemon then sized its heap from the whole
+machine, so a resource manager limited to 1GB was let grow past its limit and a namenode given 2GB used under half.
+The node manager's own work is light, and YARN's tasks run inside its container, so what YARN hands out is that
+container less the node manager's heap and the memory its JVM needs beside it:
+
+| Daemon | Heap |
+|---|---|
+| node manager | an eighth of its share, from 256MB to 1GB; YARN hands out the share less the heap and 256MB |
+| every other | three quarters of its share, leaving at least 256MB |
+
+MapReduce's defaults are scaled to a node of the template's smallest machine, where YARN hands out about 1.6GB: a 1GB
+application master and 512MB tasks, allocated in steps of 256MB, rather than 1.5GB, 1GB and 1GB, which together do not
+fit such a node at all. YARN's virtual memory check is off, since a JVM's reserved address space exceeds it from the
+start; the physical memory check still holds each task to what it asked for. Any of it can be set through the app's
+environment, `HADOOP_HEAPSIZE_MAX` included, and the node manager counts a heap set that way.
+
 **`apache/hadoop:3.5.0` is published for amd64 only**, so this image is too, which its template states as
 `"architectures": ["x86_64"]`. kopernik.us offers no arm64 machine type, such as AWS Graviton, for it. Publishing
 for arm64 would mean building Hadoop from the `aarch64` binary the Apache download page offers rather than deriving
@@ -176,7 +194,7 @@ An entrypoint configures the application from what kopernik.us injects:
 
 | Variable | What it says |
 |---|---|
-| `K_US_CONTAINER_MEMORY_MB`, `K_US_CONTAINER_CPUS` | the container's own share of the machine |
+| `K_US_CONTAINER_MEMORY_MB`, `K_US_CONTAINER_CPUS` | the container's own share of the machine, never counting the memory kept for the system |
 | `K_US_MACHINE_MEMORY_MB`, `K_US_MACHINE_CPUS` | the whole machine, for a container sizing itself against it |
 | `K_US_CLUSTER_ROLE`, `K_US_NODE_INDEX` | which node of the cluster this is |
 | `K_US_CLUSTER_UID`, `K_US_MASTER_NODE_COUNT`, `K_US_CORE_NODE_COUNT` | the cluster the node belongs to and its shape |
