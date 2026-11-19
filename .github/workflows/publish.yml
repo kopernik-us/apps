@@ -40,6 +40,9 @@ jobs:
       packages: write
       id-token: write
       attestations: write
+      # The attestation step also records where the image is stored, which links it to its build among the
+      # organization's artifacts; without this the record is refused and the step warns.
+      artifact-metadata: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
