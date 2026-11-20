@@ -1,0 +1,86 @@
+{
+  "uid": "spark",
+  "name": "Apache Spark",
+  "appType": "clusterapp",
+  "description": "Apache Spark runs data processing, SQL and machine learning across a cluster, here on Apache Hadoop: HDFS keeps the data and YARN runs Spark's executors on the machines holding it. The master nodes coordinate the cluster, holding the HDFS namenode, the YARN resource manager and the Spark history server; the core nodes hold the data and run the work, as HDFS datanodes and YARN node managers serving Spark's shuffle.",
+  "productLink": "https://spark.apache.org/",
+  "license": "Apache-2.0",
+  "versions": [
+    {
+      "version": "4.3.0",
+      "image": {
+        "id": "ghcr.io/kopernik-us/spark:4.3.0"
+      },
+      "architectures": ["x86_64"]
+    }
+  ],
+  "masterContainers": [
+    {
+      "name": "namenode-format",
+      "lifecycle": "init",
+      "args": ["/opt/kopernik/format-hdfs.sh"],
+      "dataPaths": [{ "containerPath": "/data/namenode" }]
+    },
+    {
+      "name": "namenode",
+      "args": ["hdfs", "namenode"],
+      "restartPolicy": "always",
+      "memoryMb": 2048,
+      "ports": [
+        { "hostPort": 8020, "protocol": "tcp" },
+        { "hostPort": 9870, "protocol": "tcp" }
+      ],
+      "dataPaths": [{ "containerPath": "/data/namenode", "minSizeGb": 20 }]
+    },
+    {
+      "name": "resourcemanager",
+      "args": ["yarn", "resourcemanager"],
+      "restartPolicy": "always",
+      "weight": 1,
+      "ports": [
+        { "hostPort": 8032, "protocol": "tcp" },
+        { "hostPort": 8088, "protocol": "tcp" }
+      ]
+    },
+    {
+      "name": "spark-history",
+      "args": ["/opt/kopernik/start-history-server.sh"],
+      "restartPolicy": "always",
+      "weight": 2,
+      "ports": [{ "hostPort": 18080, "protocol": "tcp" }]
+    }
+  ],
+  "coreContainers": [
+    {
+      "name": "datanode",
+      "args": ["hdfs", "datanode"],
+      "restartPolicy": "always",
+      "memoryMb": 1024,
+      "ports": [
+        { "hostPort": 9864, "protocol": "tcp" },
+        { "hostPort": 9866, "protocol": "tcp" },
+        { "hostPort": 9867, "protocol": "tcp" }
+      ],
+      "dataPaths": [{ "containerPath": "/data/datanode", "minSizeGb": 50 }]
+    },
+    {
+      "name": "nodemanager",
+      "args": ["yarn", "nodemanager"],
+      "restartPolicy": "always",
+      "weight": 3,
+      "ports": [
+        { "hostPort": 8042, "protocol": "tcp" },
+        { "hostPort": 7337, "protocol": "tcp" }
+      ]
+    }
+  ],
+  "machineRequirements": {
+    "minCpus": 2,
+    "minMemoryGb": 8
+  },
+  "coreMachineRequirements": {
+    "minCpus": 4,
+    "minMemoryGb": 8
+  },
+  "tags": ["spark", "hadoop", "hdfs", "yarn", "analytics"]
+}

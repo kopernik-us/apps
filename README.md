@@ -185,6 +185,41 @@ pointing at it got fixes without a release of ours. A version of ours names an e
 MySQL security release reaches you only when a new version is added to the template and published, while fixes to
 the system beneath it arrive when the version is rebuilt.
 
+## `spark`
+
+Apache Spark on Apache Hadoop. Every node runs one image, `FROM apache/hadoop:3.5.0` as the `hadoop` app's is, with
+the release `spark-4.3.0-bin-hadoop3` in `/opt/spark`, checked against the SHA-512 Apache published for it. Spark
+4.3.0 is built against Hadoop 3.5.0, so the Hadoop client it bundles is the release the cluster runs.
+
+The template is the `hadoop` app's cluster with a Spark history server on the master. Its Hadoop containers are the
+`hadoop` app's, given the same share of the machine, and the image runs them with that app's `entrypoint.sh` and
+`format-hdfs.sh`, copied into `4.3.0/` beside Spark's own scripts; tests fail when either copy drifts from the
+`hadoop` app's. `spark-entrypoint.sh` composes Spark's settings and then hands over to Hadoop's entry point, which
+sizes the daemons as it does for `hadoop`:
+
+| Setting | Value |
+|---|---|
+| `spark.master` | `yarn`, the resource manager on the first master |
+| `spark.eventLog.dir`, `spark.history.fs.logDirectory` | `hdfs://<first master>:8020/spark-events` |
+| `spark.yarn.jars` | `local:/opt/spark/jars/*`: every node carries them, so a job uploads none |
+| `spark.dynamicAllocation.enabled`, `spark.shuffle.service.enabled` | `true`, with Spark's shuffle service in each node manager |
+
+They are written as `SPARK-DEFAULTS.PROPERTIES_<property>` variables, which the upstream image turns into
+`spark-defaults.properties` in the Hadoop configuration directory, and `/opt/spark/conf/spark-defaults.conf` links to
+that file; so any of them is overridden through the app's environment, as Hadoop's settings are. The deploy mode is
+Spark's own default, client, since Spark refuses its shells a cluster default: a batch job is submitted with
+`--deploy-mode cluster` to run its driver in YARN.
+
+`start-history-server.sh` runs the history server, creating its event log directory in HDFS once the namenode
+answers, since nothing else does and the server refuses to start without one. The history server's container is
+given twice the resource manager's share of what the namenode leaves, and the server's heap a quarter of it, from
+512MB to 2GB: the rest is room for the drivers of jobs submitted from that container in client mode, such as the
+shells.
+
+The template asks a master for 2 CPUs and 8GB, which its namenode, resource manager and history server need between
+them, and a core node for 4 CPUs and 8GB. YARN offers a node manager a whole processor for each executor it runs, and
+a core node of two processors offers one, which one executor fills.
+
 ## Writing one
 
 The build context is the version's own directory, and an application image needs nothing else, so everything it
