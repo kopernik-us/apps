@@ -60,9 +60,9 @@ and publishing it. A version is retired by removing both, in one commit. An app 
 directories of the versions it declares, and nothing else, since nothing publishes an image from anywhere else.
 
 What a version cannot differ in is its template. A version states its own image, `architectures`,
-`machineRequirements`, license and product link, but containers, environment, ports and data paths belong to the
-template, so versions whose application is configured differently, rather than built differently, are separate apps
-under separate uids.
+`machineRequirements` (and, for a cluster, `masterMachineRequirements` and `coreMachineRequirements`), license and
+product link, but containers, environment, ports and data paths belong to the template, so versions whose application
+is configured differently, rather than built differently, are separate apps under separate uids.
 
 ## When an app gets an image of its own
 
