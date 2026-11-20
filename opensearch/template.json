@@ -50,5 +50,15 @@
   "tags": [
     "nosql",
     "database"
+  ],
+  "services": [
+    {
+      "uid": "opensearch",
+      "name": "OpenSearch API",
+      "container": "app",
+      "port": 9200,
+      "scheme": "http",
+      "path": "/"
+    }
   ]
 }

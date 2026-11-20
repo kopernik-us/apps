@@ -256,3 +256,14 @@ Each template states the license of its application as `license`, and a version 
 The application's license is not all of an image's: its base layers carry the licenses of the distribution's
 packages, and some upstream images bundle further software. The upstream image's own documentation is the place to
 read them.
+
+## HTTP services
+
+A template can declare `services` independently of port publication. Each entry gives a stable `uid`, display `name`,
+`container`, declared TCP host `port`, `scheme` (`http` or `https`), and optional initial `path` (default `/`). Cluster
+entries also name their `role` (`master` or `core`); single-container entries name `app` and omit `role`. Init containers,
+UDP ports, undeclared ports, duplicate identifiers, and paths that change origin are refused. Deployed apps retain a
+copy of the declarations. Spark, Hadoop, and OpenSearch provide examples.
+
+The gateway connects through the agent to the declared host port on loopback; it does not open provider firewall rules.
+Service access needs the new agent and a configured gateway. See [Application service access](../SERVICE_ACCESS.md).

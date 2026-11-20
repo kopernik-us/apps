@@ -82,5 +82,52 @@
     "minCpus": 4,
     "minMemoryGb": 8
   },
-  "tags": ["spark", "hadoop", "hdfs", "yarn", "analytics"]
+  "tags": ["spark", "hadoop", "hdfs", "yarn", "analytics"],
+  "services": [
+    {
+      "uid": "spark-history",
+      "name": "Spark history",
+      "role": "master",
+      "container": "spark-history",
+      "port": 18080,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "namenode",
+      "name": "HDFS NameNode",
+      "role": "master",
+      "container": "namenode",
+      "port": 9870,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "resourcemanager",
+      "name": "YARN ResourceManager",
+      "role": "master",
+      "container": "resourcemanager",
+      "port": 8088,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "datanode",
+      "name": "HDFS DataNode",
+      "role": "core",
+      "container": "datanode",
+      "port": 9864,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "nodemanager",
+      "name": "YARN NodeManager",
+      "role": "core",
+      "container": "nodemanager",
+      "port": 8042,
+      "scheme": "http",
+      "path": "/"
+    }
+  ]
 }

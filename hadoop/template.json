@@ -68,5 +68,43 @@
     "minCpus": 2,
     "minMemoryGb": 4
   },
-  "tags": ["hadoop", "hdfs", "yarn", "analytics"]
+  "tags": ["hadoop", "hdfs", "yarn", "analytics"],
+  "services": [
+    {
+      "uid": "namenode",
+      "name": "HDFS NameNode",
+      "role": "master",
+      "container": "namenode",
+      "port": 9870,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "resourcemanager",
+      "name": "YARN ResourceManager",
+      "role": "master",
+      "container": "resourcemanager",
+      "port": 8088,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "datanode",
+      "name": "HDFS DataNode",
+      "role": "core",
+      "container": "datanode",
+      "port": 9864,
+      "scheme": "http",
+      "path": "/"
+    },
+    {
+      "uid": "nodemanager",
+      "name": "YARN NodeManager",
+      "role": "core",
+      "container": "nodemanager",
+      "port": 8042,
+      "scheme": "http",
+      "path": "/"
+    }
+  ]
 }
