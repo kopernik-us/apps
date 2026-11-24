@@ -22,12 +22,12 @@ if ! hdfs dfs -test -d "$directory" 2>/dev/null; then
     exit 1
 fi
 
-# The history server's heap, which Spark sizes at 1GB whatever the container, is a quarter of this container's share:
-# the rest is left for the drivers of jobs submitted from this container in client mode, such as the shells. It is
-# never less than 512MB, which it needs to list a few hundred jobs, nor more than 2GB.
+# The history server's heap, which Spark sizes at 1GB whatever the container, is half of this container's share, the
+# rest being what its JVM needs beside the heap. It is never less than 512MB, which it needs to list a few hundred
+# jobs, nor more than 2GB, which is more than its event logs call for.
 memory_mb="${K_US_CONTAINER_MEMORY_MB:-}"
 if [ -z "${SPARK_DAEMON_MEMORY:-}" ] && [ -n "$memory_mb" ]; then
-    daemon_mb=$((memory_mb / 4))
+    daemon_mb=$((memory_mb / 2))
     if [ "$daemon_mb" -lt 512 ]; then
         daemon_mb=512
     elif [ "$daemon_mb" -gt 2048 ]; then

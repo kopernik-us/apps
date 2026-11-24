@@ -2,7 +2,7 @@
   "uid": "spark",
   "name": "Apache Spark",
   "appType": "clusterapp",
-  "description": "Apache Spark runs data processing, SQL and machine learning across a cluster, here on Apache Hadoop: HDFS keeps the data and YARN runs Spark's executors on the machines holding it. The master nodes coordinate the cluster, holding the HDFS namenode, the YARN resource manager and the Spark history server; the core nodes hold the data and run the work, as HDFS datanodes and YARN node managers serving Spark's shuffle.",
+  "description": "Apache Spark runs data processing, SQL and machine learning across a cluster, here on Apache Hadoop: HDFS keeps the data and YARN runs Spark's executors on the machines holding it. The master nodes coordinate the cluster, holding the HDFS namenode, the YARN resource manager, the Spark history server and JupyterLab, whose PySpark notebooks run their Spark drivers there; the core nodes hold the data and run the work, as HDFS datanodes and YARN node managers serving Spark's shuffle.",
   "productLink": "https://spark.apache.org/",
   "license": "Apache-2.0",
   "versions": [
@@ -46,8 +46,16 @@
       "name": "spark-history",
       "args": ["/opt/kopernik/start-history-server.sh"],
       "restartPolicy": "always",
-      "weight": 2,
+      "memoryMb": 1024,
       "ports": [{ "hostPort": 18080, "protocol": "tcp" }]
+    },
+    {
+      "name": "jupyter",
+      "args": ["/opt/kopernik/start-jupyter.sh"],
+      "restartPolicy": "always",
+      "weight": 3,
+      "ports": [{ "hostPort": 8888, "protocol": "tcp" }],
+      "dataPaths": [{ "containerPath": "/data/notebooks", "minSizeGb": 10 }]
     }
   ],
   "coreContainers": [
@@ -84,6 +92,15 @@
   },
   "tags": ["spark", "hadoop", "hdfs", "yarn", "analytics"],
   "services": [
+    {
+      "uid": "jupyter",
+      "name": "JupyterLab",
+      "role": "master",
+      "container": "jupyter",
+      "port": 8888,
+      "scheme": "http",
+      "path": "/lab"
+    },
     {
       "uid": "spark-history",
       "name": "Spark history",

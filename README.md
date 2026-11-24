@@ -191,7 +191,7 @@ Apache Spark on Apache Hadoop. Every node runs one image, `FROM apache/hadoop:3.
 the release `spark-4.3.0-bin-hadoop3` in `/opt/spark`, checked against the SHA-512 Apache published for it. Spark
 4.3.0 is built against Hadoop 3.5.0, so the Hadoop client it bundles is the release the cluster runs.
 
-The template is the `hadoop` app's cluster with a Spark history server on the master. Its Hadoop containers are the
+The template is the `hadoop` app's cluster with a Spark history server and JupyterLab on the master. Its Hadoop containers are the
 `hadoop` app's, given the same share of the machine, and the image runs them with that app's `entrypoint.sh` and
 `format-hdfs.sh`, copied into `4.3.0/` beside Spark's own scripts; tests fail when either copy drifts from the
 `hadoop` app's. `spark-entrypoint.sh` composes Spark's settings and then hands over to Hadoop's entry point, which
@@ -212,12 +212,41 @@ Spark's own default, client, since Spark refuses its shells a cluster default: a
 
 `start-history-server.sh` runs the history server, creating its event log directory in HDFS once the namenode
 answers, since nothing else does and the server refuses to start without one. The history server's container is
-given twice the resource manager's share of what the namenode leaves, and the server's heap a quarter of it, from
-512MB to 2GB: the rest is room for the drivers of jobs submitted from that container in client mode, such as the
-shells.
+given 1GB, as the namenode is given its 2GB, rather than a share which grows with the machine, and the server's heap
+half of it: a larger heap than that serves no more jobs than the server is asked to list, so the memory of a larger
+master goes to the notebooks' drivers instead.
 
-The template asks a master for 2 CPUs and 8GB, which its namenode, resource manager and history server need between
-them, and a core node for 4 CPUs and 8GB. YARN offers a node manager a whole processor for each executor it runs, and
+### Notebooks
+
+`start-jupyter.sh` runs JupyterLab on the master, which the console opens as the **JupyterLab** service. Its
+**PySpark** kernel starts a Spark session when a notebook's first cell runs, as `spark` and `sc`, with the driver in
+the kernel, in client mode, and its executors in YARN on the core nodes; `spark-session.py` is that start, and names
+the application after the notebook. The session starts with the first cell rather than with the kernel, since it
+waits for YARN to run its application master, which on a busy cluster takes longer than JupyterLab waits for a
+kernel. A plain **Python 3** kernel is there too, and a terminal, which is where `spark-shell` and `pyspark` are run.
+
+| Setting | Value |
+|---|---|
+| Container share | three times the resource manager's of what the namenode and the history server leave: about 3GB of a master of 8GB and 21GB of one of 32GB |
+| `SPARK_DRIVER_MEMORY` | a third of the share, from 512MB to 4GB, which a session's own `spark.driver.memory` overrides |
+| Notebooks, settings, workspaces | `/data/notebooks`, a data path of its own, so they outlive the container |
+| Idle kernels | shut down after an hour, giving back the driver and its application master; executors go sooner, by dynamic allocation |
+
+JupyterLab listens on `127.0.0.1` alone and asks for no token. The containers share the machine's network, so
+listening anywhere else would offer a shell on the machine to whatever reaches it, while on loopback only the agent
+does, carrying requests the service gateway authorised for the account: anyone who may write to the account may run
+code on its clusters, as they may already by recreating them. The `hadoop` user has `sudo` in the upstream image, so
+a terminal reaches root inside the container. JupyterLab is told to allow remote access because the gateway names the
+service's own host in what it carries, which JupyterLab otherwise refuses from a server on loopback.
+
+Every node runs PySpark with one Python, `/opt/python`, a virtual environment holding JupyterLab and the libraries a
+driver and its executors need alike: NumPy, pandas, PyArrow and Matplotlib. `requirements.txt` names each at an exact
+release, as the Dockerfile names Spark's, so a fix to one of them reaches a cluster when the release is raised there
+and the version published again. Spark's Python package is the one in `/opt/spark`, which the environment finds
+through a `.pth` file, so a driver is always the release the cluster runs.
+
+The template asks a master for 2 CPUs and 8GB, which its namenode, resource manager, history server and notebooks need
+between them, and a core node for 4 CPUs and 8GB. YARN offers a node manager a whole processor for each executor it runs, and
 a core node of two processors offers one, which one executor fills.
 
 ## Writing one

@@ -23,13 +23,28 @@ RUN curl -fsSL -o /tmp/spark.tgz https://archive.apache.org/dist/spark/spark-4.3
     # the Hadoop configuration directory, in a format Spark reads alike.
     && ln -s /opt/hadoop/etc/hadoop/spark-defaults.properties /opt/spark/conf/spark-defaults.conf
 
-COPY entrypoint.sh format-hdfs.sh spark-entrypoint.sh start-history-server.sh /opt/kopernik/
-# The data directories are the defaults the entry point configures. They are created here so that a node whose volume
-# is mounted elsewhere, or not at all, still starts: HDFS refuses to run on a path it cannot write, and the image's own
-# user is not the one Docker would create a missing bind mount for.
+# PySpark's drivers and executors run one Python, kept apart from the system's in /opt/python: JupyterLab for the master's
+# notebooks, and the libraries a notebook's driver and its executors need alike, which is why every node carries it.
+# Spark's own Python package is the one in /opt/spark, so the driver is always the release the cluster runs.
+COPY requirements.txt /tmp/requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3 -m venv /opt/python \
+    && /opt/python/bin/pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt \
+    && site="$(/opt/python/bin/python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')" \
+    && { echo /opt/spark/python; ls /opt/spark/python/lib/py4j-*-src.zip; } > "$site/spark.pth"
+
+COPY entrypoint.sh format-hdfs.sh /opt/kopernik/
+COPY spark-entrypoint.sh start-history-server.sh start-jupyter.sh spark-session.py /opt/kopernik/
+COPY pyspark-kernel.json /opt/python/share/jupyter/kernels/pyspark/kernel.json
+# The data directories are the defaults the entry point configures, and the notebooks' own. They are created here so
+# that a node whose volume is mounted elsewhere, or not at all, still starts: HDFS refuses to run on a path it cannot
+# write, and the image's own user is not the one Docker would create a missing bind mount for.
 RUN chmod 0755 /opt/kopernik/entrypoint.sh /opt/kopernik/format-hdfs.sh /opt/kopernik/spark-entrypoint.sh \
-        /opt/kopernik/start-history-server.sh \
-    && mkdir -p /data/namenode /data/datanode \
+        /opt/kopernik/start-history-server.sh /opt/kopernik/start-jupyter.sh \
+    && mkdir -p /data/namenode /data/datanode /data/notebooks \
     && chown -R hadoop:users /data
 
 # What a shell opened in a container needs to submit a job: Spark on the path, the cluster's Hadoop configuration, and
@@ -37,7 +52,7 @@ RUN chmod 0755 /opt/kopernik/entrypoint.sh /opt/kopernik/format-hdfs.sh /opt/kop
 ENV SPARK_HOME=/opt/spark \
     HADOOP_CONF_DIR=/opt/hadoop/etc/hadoop \
     PATH=/opt/spark/bin:${PATH} \
-    PYSPARK_PYTHON=python3
+    PYSPARK_PYTHON=/opt/python/bin/python
 
 USER hadoop
 

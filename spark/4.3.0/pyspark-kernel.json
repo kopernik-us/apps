@@ -1,0 +1,13 @@
+{
+  "display_name": "PySpark",
+  "language": "python",
+  "argv": [
+    "/opt/python/bin/python",
+    "-m",
+    "ipykernel_launcher",
+    "-f",
+    "{connection_file}",
+    "--IPKernelApp.exec_files=/opt/kopernik/spark-session.py"
+  ],
+  "metadata": { "debugger": true }
+}
