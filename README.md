@@ -134,6 +134,12 @@ could state, because it holds the name of the cluster's first master, and the en
 unexpanded. The entry point composes it on the machine, where `K_US_MASTER_HOSTS` has a value, and sets
 nothing the cluster set for itself, so any of it can be overridden through the app's environment.
 
+The resource manager is bound to every interface, by `yarn.resourcemanager.bind-host=0.0.0.0`, because it otherwise
+binds to the master's name alone, which is the machine's address on the cluster's network, and the agent carries the
+**YARN ResourceManager** service to `127.0.0.1:8088`, where nothing would answer. The namenode's web interface listens
+on every interface by Hadoop's own default, so the two are reached alike; the cluster's firewall decides what reaches
+either from outside.
+
 `format-hdfs.sh` is the template's init container. A step leads the service containers of its node, so the
 namenode starts on a filesystem which exists. The step states the namenode's data path, `/data/namenode`, as its
 own, which is what gives the two one directory: each data path is kept in a volume of the node which every

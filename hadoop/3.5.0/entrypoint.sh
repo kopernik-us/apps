@@ -36,6 +36,11 @@ fi
 # which the API keeps current as the cluster's machines report their addresses.
 add_setting "CORE-SITE.XML_fs.defaultFS=hdfs://$master:8020"
 add_setting "YARN-SITE.XML_yarn.resourcemanager.hostname=$master"
+# The resource manager binds its addresses to that name, which is the machine's address on the cluster's network
+# alone, so the agent, which carries the service gateway's requests to loopback, would find nothing on 127.0.0.1:8088.
+# Every interface is what the namenode's web interface listens on by default as well; the cluster's firewall decides
+# what reaches either from outside.
+add_setting "YARN-SITE.XML_yarn.resourcemanager.bind-host=0.0.0.0"
 
 add_setting "HDFS-SITE.XML_dfs.namenode.name.dir=file:///data/namenode"
 add_setting "HDFS-SITE.XML_dfs.datanode.data.dir=file:///data/datanode"
