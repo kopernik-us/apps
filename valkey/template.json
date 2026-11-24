@@ -34,8 +34,7 @@
     }
   ],
   "machineRequirements": {
-    "minCpus": 1,
-    "minMemoryGb": 1
+    "minCpus": 1
   },
   "tags": [
     "cache"

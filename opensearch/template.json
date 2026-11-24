@@ -43,9 +43,9 @@
       "minSizeGb": 30
     }
   ],
+  "minMemoryMb": 2048,
   "machineRequirements": {
-    "minCpus": 2,
-    "minMemoryGb": 4
+    "minCpus": 2
   },
   "tags": [
     "nosql",

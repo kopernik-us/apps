@@ -64,6 +64,14 @@ What a version cannot differ in is its template. A version states its own image,
 product link, but containers, environment, ports and data paths belong to the template, so versions whose application
 is configured differently, rather than built differently, are separate apps under separate uids.
 
+A template states the processors it wants in `machineRequirements`, but not the memory: the registry reckons
+`minMemoryGb` from what the containers need, so that the machine the console recommends is one they start on, and a
+template stating a figure of its own is rejected. A container which needs memory to run says so with `minMemoryMb`,
+and is held to it: it refuses to start on a machine which cannot leave it that much. A cluster's containers state it
+each, and each role is recommended the machine its own containers need; a template of one container states it beside
+its ports, and an app created from it is given it unless the request names its own. A container naming no minimum
+counts 16MB for each part of its weight.
+
 ## When an app gets an image of its own
 
 A template whose application reads its environment points at the upstream image and has no Dockerfile:
@@ -146,8 +154,9 @@ container less the node manager's heap and the memory its JVM needs beside it:
 | node manager | an eighth of its share, from 256MB to 1GB; YARN hands out the share less the heap and 256MB |
 | every other | three quarters of its share, leaving at least 256MB |
 
-MapReduce's defaults are scaled to a node of the template's smallest machine, where YARN hands out about 1.6GB: a 1GB
-application master and 512MB tasks, allocated in steps of 256MB, rather than 1.5GB, 1GB and 1GB, which together do not
+The node manager is given at least 2GB, of which YARN hands out 1.5GB, and MapReduce's defaults are scaled to that
+and to a node of the template's smallest machine, 4GB, where YARN hands out about 1.6GB: a 1GB application master and
+512MB tasks, allocated in steps of 256MB, rather than 1.5GB, 1GB and 1GB, which together do not
 fit such a node at all. YARN's virtual memory check is off, since a JVM's reserved address space exceeds it from the
 start; the physical memory check still holds each task to what it asked for. Any of it can be set through the app's
 environment, `HADOOP_HEAPSIZE_MAX` included, and the node manager counts a heap set that way.
@@ -212,9 +221,9 @@ Spark's own default, client, since Spark refuses its shells a cluster default: a
 
 `start-history-server.sh` runs the history server, creating its event log directory in HDFS once the namenode
 answers, since nothing else does and the server refuses to start without one. The history server's container is
-given 1GB, as the namenode is given its 2GB, rather than a share which grows with the machine, and the server's heap
-half of it: a larger heap than that serves no more jobs than the server is asked to list, so the memory of a larger
-master goes to the notebooks' drivers instead.
+given the resource manager's share of what the namenode leaves, held between 1GB and 2GB, and the server's heap half
+of it: a larger heap than that serves no more jobs than the server is asked to list, so the memory of a larger master
+goes to the notebooks' drivers instead.
 
 ### Notebooks
 
@@ -227,7 +236,7 @@ kernel. A plain **Python 3** kernel is there too, and a terminal, which is where
 
 | Setting | Value |
 |---|---|
-| Container share | three times the resource manager's of what the namenode and the history server leave: about 3GB of a master of 8GB and 21GB of one of 32GB |
+| Container share | three times the resource manager's of what the namenode and the history server leave: about 3GB of a master of 8GB and 20GB of one of 32GB |
 | `SPARK_DRIVER_MEMORY` | a third of the share, from 512MB to 4GB, which a session's own `spark.driver.memory` overrides |
 | Notebooks, settings, workspaces | `/data/notebooks`, a data path of its own, so they outlive the container |
 | Idle kernels | shut down after an hour, giving back the driver and its application master; executors go sooner, by dynamic allocation |
@@ -245,8 +254,9 @@ release, as the Dockerfile names Spark's, so a fix to one of them reaches a clus
 and the version published again. Spark's Python package is the one in `/opt/spark`, which the environment finds
 through a `.pth` file, so a driver is always the release the cluster runs.
 
-The template asks a master for 2 CPUs and 8GB, which its namenode, resource manager, history server and notebooks need
-between them, and a core node for 4 CPUs and 8GB. YARN offers a node manager a whole processor for each executor it runs, and
+The template asks a master for 2 CPUs and a core node for 4, and each is recommended the memory its containers need:
+7GB for a master, whose namenode needs 2GB and its resource manager, history server and notebooks 1GB each, and 4GB
+for a core node, whose datanode needs 1GB and node manager 2GB, as Hadoop's do. YARN offers a node manager a whole processor for each executor it runs, and
 a core node of two processors offers one, which one executor fills.
 
 ## Writing one

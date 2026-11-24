@@ -43,9 +43,9 @@
       "minSizeGb": 20
     }
   ],
+  "minMemoryMb": 1024,
   "machineRequirements": {
-    "minCpus": 1,
-    "minMemoryGb": 2
+    "minCpus": 1
   },
   "tags": [
     "sql",

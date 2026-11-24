@@ -25,7 +25,8 @@
       "name": "namenode",
       "args": ["hdfs", "namenode"],
       "restartPolicy": "always",
-      "memoryMb": 2048,
+      "minMemoryMb": 2048,
+      "maxMemoryMb": 2048,
       "ports": [
         { "hostPort": 8020, "protocol": "tcp" },
         { "hostPort": 9870, "protocol": "tcp" }
@@ -36,6 +37,7 @@
       "name": "resourcemanager",
       "args": ["yarn", "resourcemanager"],
       "restartPolicy": "always",
+      "minMemoryMb": 1024,
       "weight": 1,
       "ports": [
         { "hostPort": 8032, "protocol": "tcp" },
@@ -46,13 +48,15 @@
       "name": "spark-history",
       "args": ["/opt/kopernik/start-history-server.sh"],
       "restartPolicy": "always",
-      "memoryMb": 1024,
+      "minMemoryMb": 1024,
+      "maxMemoryMb": 2048,
       "ports": [{ "hostPort": 18080, "protocol": "tcp" }]
     },
     {
       "name": "jupyter",
       "args": ["/opt/kopernik/start-jupyter.sh"],
       "restartPolicy": "always",
+      "minMemoryMb": 1024,
       "weight": 3,
       "ports": [{ "hostPort": 8888, "protocol": "tcp" }],
       "dataPaths": [{ "containerPath": "/data/notebooks", "minSizeGb": 10 }]
@@ -63,7 +67,8 @@
       "name": "datanode",
       "args": ["hdfs", "datanode"],
       "restartPolicy": "always",
-      "memoryMb": 1024,
+      "minMemoryMb": 1024,
+      "maxMemoryMb": 1024,
       "ports": [
         { "hostPort": 9864, "protocol": "tcp" },
         { "hostPort": 9866, "protocol": "tcp" },
@@ -75,6 +80,7 @@
       "name": "nodemanager",
       "args": ["yarn", "nodemanager"],
       "restartPolicy": "always",
+      "minMemoryMb": 2048,
       "weight": 3,
       "ports": [
         { "hostPort": 8042, "protocol": "tcp" },
@@ -83,12 +89,10 @@
     }
   ],
   "machineRequirements": {
-    "minCpus": 2,
-    "minMemoryGb": 8
+    "minCpus": 2
   },
   "coreMachineRequirements": {
-    "minCpus": 4,
-    "minMemoryGb": 8
+    "minCpus": 4
   },
   "tags": ["spark", "hadoop", "hdfs", "yarn", "analytics"],
   "services": [
